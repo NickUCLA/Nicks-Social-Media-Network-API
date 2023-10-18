@@ -1,14 +1,12 @@
-const router = require('express').Router();
-const {
-  getUsers,
-  getSingleUser,
-  createUser,
-} = require('../../controllers/userController');
+const express = require("express");
+const router = express.Router();
+const userController = require("../controllers/userController");
 
-// /api/users
-router.route('/').get(getUsers).post(createUser);
-
-// /api/users/:userId
-router.route('/:userId').get(getSingleUser);
+// Define user-related routes using the userController functions
+router.get("/users", userController.getAllUsers);
+router.get("/users/:id", userController.getUserById);
+router.post("/users", userController.createUser);
+router.put("/users/:id", userController.updateUser);
+router.delete("/users/:id", userController.deleteUser);
 
 module.exports = router;
