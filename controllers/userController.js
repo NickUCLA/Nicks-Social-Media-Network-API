@@ -1,52 +1,72 @@
-const { User, Application } = require('../models');
+const User = require("../models/User");
 
 module.exports = {
-  // Get all users
-  async getUsers(req, res) {
+  getAllUsers: async (req, res) => {
     try {
       const users = await User.find();
       res.json(users);
-    } catch (err) {
-      res.status(500).json(err);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   },
-  // Get a single user
-  async getSingleUser(req, res) {
+
+  getUserById: async (req, res) => {
     try {
-      const user = await User.findOne({ _id: req.params.userId })
-        .select('-__v');
-
+      const user = await User.findById(req.params.id)
+        .populate("thoughts")
+        .populate("friends");
       if (!user) {
-        return res.status(404).json({ message: 'No user with that ID' });
+        return res.status(404).json({ error: "User not found" });
       }
-
       res.json(user);
-    } catch (err) {
-      res.status(500).json(err);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   },
-  // create a new user
-  async createUser(req, res) {
+
+  createUser: async (req, res) => {
     try {
       const user = await User.create(req.body);
-      res.json(user);
-    } catch (err) {
-      res.status(500).json(err);
+      res.status(201).json(user);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   },
-  // Delete a user and associated apps
-  async deleteUser(req, res) {
-    try {
-      const user = await User.findOneAndDelete({ _id: req.params.userId });
 
+  updateUser: async (req, res) => {
+    try {
+      const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+      });
       if (!user) {
-        return res.status(404).json({ message: 'No user with that ID' });
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  },
+
+  deleteUser: async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
       }
 
-      await Application.deleteMany({ _id: { $in: user.applications } });
-      res.json({ message: 'User and associated apps deleted!' })
-    } catch (err) {
-      res.status(500).json(err);
+      // Remove user's associated thoughts
+      await user.populate("thoughts").execPopulate();
+      const thoughtIds = user.thoughts.map((thought) => thought._id);
+      await Thought.deleteMany({ _id: { $in: thoughtIds } });
+
+      // Remove the user
+      await user.remove();
+
+      res.json({
+        message: "User and associated thoughts removed successfully",
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   },
 };
