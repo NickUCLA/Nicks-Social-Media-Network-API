@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Thought = require("../models/Thought");
 
 module.exports = {
   getAllUsers: async (req, res) => {
@@ -78,17 +79,41 @@ module.exports = {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Remove user's associated thoughts
-      await user.populate("thoughts").execPopulate();
-      const thoughtIds = user.thoughts.map((thought) => thought._id);
-      await Thought.deleteMany({ _id: { $in: thoughtIds } });
+      if (user.thoughts.length > 0) {
+        await Thought.deleteMany({ _id: { $in: user.thoughts } });
+      }
 
-      // Remove the user
-      await user.remove();
+      await user.deleteOne({ _id: req.params.id });
 
       res.json({
         message: "User and associated thoughts removed successfully",
       });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  removeFriend: async (req, res) => {
+    try {
+      const { friendId } = req.params;
+      const user = await User.findById(req.params.userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.friends.includes(friendId)) {
+        return res
+          .status(400)
+          .json({ error: "Friend not found in user's friends list" });
+      }
+
+      user.friends = user.friends.filter(
+        (friend) => friend.toString() !== friendId
+      );
+      await user.save();
+
+      res.json({ message: "Friend removed successfully" });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
