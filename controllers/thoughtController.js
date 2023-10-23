@@ -1,4 +1,5 @@
 const Thought = require("../models/Thought");
+const User = require("../models/User");
 
 module.exports = {
   getAllThoughts: async (req, res) => {
@@ -24,7 +25,22 @@ module.exports = {
 
   createThought: async (req, res) => {
     try {
-      const thought = await Thought.create(req.body);
+      const { thoughtText, username } = req.body;
+
+      const user = await User.findOne({ username });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const thought = await Thought.create({
+        thoughtText,
+        username,
+      });
+
+      user.thoughts.push(thought);
+      await user.save();
+
       res.status(201).json(thought);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -48,12 +64,12 @@ module.exports = {
   deleteThought: async (req, res) => {
     try {
       const thought = await Thought.findById(req.params.id);
+
       if (!thought) {
         return res.status(404).json({ error: "Thought not found" });
       }
 
-      // Remove the thought
-      await thought.remove();
+      await Thought.deleteOne({ _id: req.params.id });
 
       res.json({ message: "Thought removed successfully" });
     } catch (error) {

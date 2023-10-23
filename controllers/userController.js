@@ -47,6 +47,30 @@ module.exports = {
     }
   },
 
+  addFriends: async (req, res) => {
+    const userId = req.params.id;
+    const { friends } = req.body;
+
+    try {
+      // Find the user by ID
+      const user = await User.findById(userId);
+
+      if (!user) {
+        // User not found
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Add friends to the user's friends list
+      user.friends.push(...friends);
+      await user.save();
+
+      res.status(200).json(user);
+    } catch (error) {
+      console.error("Error adding friends:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+
   deleteUser: async (req, res) => {
     try {
       const user = await User.findById(req.params.id);
